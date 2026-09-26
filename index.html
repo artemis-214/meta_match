@@ -3,18 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MetaMatch - Audio Metadata & Lyrics Tagger</title>
   
+  <!-- Primary SEO Tags -->
+  <title>MetaMatch — Free In-Browser MP3 Audio Metadata & Lyrics Tagger</title>
+  <meta name="title" content="MetaMatch — Free In-Browser MP3 Audio Metadata & Lyrics Tagger">
+  <meta name="description" content="Free, open-source client-side music metadata editor. Auto-match song details via iTunes, embed synced/plain lyrics (USLT/LRC) via LRCLIB, and attach high-res album covers directly in your browser.">
+  <meta name="keywords" content="audio tagger, mp3 metadata editor, id3 tagger online, lyrics embedder, lrc downloader, browser id3 tagger, free music tools, client side audio editor">
+  <meta name="author" content="MetaMatch">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://metamatch.dpdns.org/">
+
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="media/favicon.png">
-  
-  <!-- Tailwind CSS CDN -->
+
+  <!-- Open Graph / Facebook / Discord -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://metamatch.dpdns.org/">
+  <meta property="og:title" content="MetaMatch — Free In-Browser Audio Metadata & Lyrics Tagger">
+  <meta property="og:description" content="Edit MP3 tags, download synced lyrics (.lrc), and embed high-res cover art in seconds. 100% private and runs entirely in your browser.">
+  <meta property="og:image" content="https://metamatch.dpdns.org/media/logo.png">
+
+  <!-- Twitter / X -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://metamatch.dpdns.org/">
+  <meta property="twitter:title" content="MetaMatch — Free In-Browser Audio Metadata & Lyrics Tagger">
+  <meta property="twitter:description" content="Edit MP3 tags, download synced lyrics (.lrc), and embed high-res cover art in seconds. 100% private and runs entirely in your browser.">
+  <meta property="twitter:image" content="https://metamatch.dpdns.org/media/logo.png">
+
+  <!-- JSON-LD Structured Data Schema for Google WebApplication -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "MetaMatch",
+    "url": "https://metamatch.dpdns.org/",
+    "description": "An open-source, client-side MP3 metadata and ID3 tag editor that automatically fetches lyrics and album art.",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "All",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  }
+  </script>
+
+  <!-- Tailwind CSS & Libraries -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- jsmediatags: In-browser ID3 / MP4 reader -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
-  <!-- browser-id3-writer: In-browser ID3v2.3 writer with USLT & APIC support -->
   <script src="https://cdn.jsdelivr.net/npm/browser-id3-writer@4.4.0/dist/browser-id3-writer.min.js"></script>
 
   <style>
@@ -44,11 +81,11 @@
       background: rgba(15, 23, 42, 0.85);
       border: 1px solid rgba(255, 255, 255, 0.12);
       color: #f1f5f9;
-      font-size: 16px; /* Prevents auto-zoom on iOS */
+      font-size: 16px;
     }
     @media (min-width: 640px) {
       .glass-input {
-        font-size: 0.875rem; /* 14px on tablets/desktops */
+        font-size: 0.875rem;
       }
     }
     .glass-input:focus {
