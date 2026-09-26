@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaMatch</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- jsmediatags: Reads ID3 / FLAC / MP4 audio metadata in browser -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+  <!-- browser-id3-writer: Writes ID3v3 tags + embedded APIC album art directly to MP3 ArrayBuffers -->
+  <script src="https://cdn.jsdelivr.net/npm/browser-id3-writer@4.4.0/dist/browser-id3-writer.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    /* Custom subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-input {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .glass-input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <header class="border-b border-slate-800/80 sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <i data-lucide="disc-3" class="w-5 h-5 text-white animate-spin-slow"></i>
+        </div>
+        <div>
+          <span class="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">MetaMatch</span>
+          <span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 font-medium border border-indigo-500/20">Edit your audio metadata, on your browser</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 text-sm">
+      </div>
+    </div>
+  </header>
+
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
+    
+    <!-- Hero / Drag & Drop Upload Section -->
+    <section id="upload-section" class="transition-all duration-300">
+      <div id="drop-zone" class="relative group cursor-pointer border-2 border-dashed border-slate-700/80 hover:border-indigo-500/80 rounded-2xl p-8 sm:p-12 text-center bg-slate-900/40 hover:bg-slate-900/80 transition-all shadow-xl">
+        <input type="file" id="file-input" accept="audio/*,.mp3,.flac,.m4a,.wav" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+        <div class="max-w-md mx-auto flex flex-col items-center">
+          <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-lg shadow-indigo-500/10">
+            <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+          </div>
+          <h2 class="text-xl font-bold text-white mb-2">Drop your audio file here, or <span class="text-indigo-400 underline decoration-indigo-400/40 hover:decoration-indigo-400">browse</span></h2>
+          <p class="text-slate-400 text-sm mb-4">Supports MP3 (tag reading & writing), FLAC, M4A, and WAV (metadata search & playback)</p>
+          <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700/50">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>100% private. Files never leave your browser.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Workspace View (Hidden until file selected) -->
+    <div id="workspace" class="hidden flex flex-col gap-8">
+      
+      <!-- Audio Preview & Quick File Info Banner -->
+      <section class="glass-card rounded-2xl p-5 shadow-2xl">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-5">
+          <!-- Track minimal overview -->
+          <div class="flex items-center gap-4 w-full md:w-auto">
+            <div id="banner-art-container" class="w-16 h-16 rounded-xl bg-slate-800 border border-slate-700/60 overflow-hidden flex-shrink-0 flex items-center justify-center">
+              <i data-lucide="music" class="w-6 h-6 text-slate-500" id="banner-placeholder-icon"></i>
+              <img id="banner-art-img" src="" alt="Album Art" class="hidden w-full h-full object-cover">
+            </div>
+            <div class="min-w-0 flex-1">
+              <h3 id="banner-title" class="text-base font-semibold text-white truncate">Unknown Title</h3>
+              <p id="banner-subtitle" class="text-sm text-slate-400 truncate">Unknown Artist</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span id="banner-filename" class="text-xs text-slate-400 font-mono truncate max-w-[200px] sm:max-w-xs bg-slate-800/80 px-2 py-0.5 rounded">file.mp3</span>
+                <span id="banner-filesize" class="text-xs text-slate-500">0.0 MB</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- HTML5 Custom Audio Player Control -->
+          <div class="flex items-center gap-4 w-full md:w-auto justify-end">
+            <audio id="audio-player" class="hidden"></audio>
+            <button id="btn-play-pause" class="w-11 h-11 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 transition-all flex-shrink-0">
+              <i data-lucide="play" id="play-icon" class="w-5 h-5 fill-current"></i>
+            </button>
+            <div class="flex flex-col w-full sm:w-64 gap-1.5">
+              <div class="flex justify-between text-xs text-slate-400 font-mono">
+                <span id="audio-current-time">0:00</span>
+                <span id="audio-duration">0:00</span>
+              </div>
+              <input type="range" id="audio-seek" value="0" min="0" step="0.1" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+            </div>
+            <button id="btn-change-file" class="text-xs text-slate-400 hover:text-white px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 transition-colors flex items-center gap-1.5 whitespace-nowrap">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>Change File</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Left: Online Search & Match Results (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-5">
+          <div class="glass-card rounded-2xl p-6 shadow-xl flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-base font-semibold text-white flex items-center gap-2">
+                <i data-lucide="search" class="w-4 h-4 text-indigo-400"></i>
+                <span>Match Online Metadata</span>
+              </h2>
+              <span id="search-status-badge" class="text-xs text-slate-400 bg-slate-800/80 border border-slate-700/60 px-2 py-0.5 rounded-full">iTunes Store API</span>
+            </div>
+
+            <!-- Manual Search Bar -->
+            <form id="search-form" class="flex gap-2">
+              <div class="relative flex-1">
+                <i data-lucide="disc" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                <input type="text" id="manual-search-query" placeholder="Search track or artist..." class="w-full glass-input rounded-xl pl-9 pr-3 py-2 text-sm text-white placeholder-slate-500 outline-none">
+              </div>
+              <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-1.5 shadow-md shadow-indigo-600/20">
+                <i data-lucide="search" class="w-4 h-4"></i>
+                <span>Search</span>
+              </button>
+            </form>
+
+            <!-- Search Results Listing -->
+            <div class="flex flex-col gap-2 max-h-[500px] overflow-y-auto pr-1" id="matches-list">
+              <div class="text-center py-8 text-slate-500 text-sm">
+                <i data-lucide="music-2" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+                <span>No query searched yet.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Current vs Matched Editor (7 cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-5">
+          <div class="glass-card rounded-2xl p-6 shadow-xl flex flex-col gap-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+              <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                  <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i>
+                  <span>Metadata Inspector & Editor</span>
+                </h2>
+                <p class="text-xs text-slate-400">Edit fields directly, or click any matched track on the left to prefill.</p>
+              </div>
+              <button id="btn-save-download" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-xl text-sm font-semibold shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Save & Download Tagged File</span>
+              </button>
+            </div>
+
+            <!-- Side-by-side or Clean Editable Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              <!-- Album Artwork Column -->
+              <div class="flex flex-col gap-3">
+                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Album Cover</label>
+                <div class="relative group aspect-square rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center shadow-inner">
+                  <img id="edit-art-preview" src="" alt="Album Art Preview" class="hidden w-full h-full object-cover transition-transform group-hover:scale-105 duration-300">
+                  <div id="edit-art-empty" class="text-center p-6 text-slate-600">
+                    <i data-lucide="image" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+                    <p class="text-xs text-slate-500">No cover art selected</p>
+                  </div>
+                </div>
+
+                <div class="flex gap-2">
+                  <input type="text" id="edit-art-url" placeholder="Paste custom artwork image URL..." class="flex-1 glass-input rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none">
+                  <button id="btn-load-custom-art" type="button" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-xl border border-slate-700 font-medium transition-colors">
+                    Load
+                  </button>
+                </div>
+              </div>
+
+              <!-- Metadata Form Fields -->
+              <div class="flex flex-col gap-3.5">
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1" for="meta-title">Song Title</label>
+                  <input type="text" id="meta-title" class="w-full glass-input rounded-xl px-3.5 py-2 text-sm text-white outline-none">
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1" for="meta-artist">Artist / Band</label>
+                  <input type="text" id="meta-artist" class="w-full glass-input rounded-xl px-3.5 py-2 text-sm text-white outline-none">
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1" for="meta-album">Album Name</label>
+                  <input type="text" id="meta-album" class="w-full glass-input rounded-xl px-3.5 py-2 text-sm text-white outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1" for="meta-year">Release Year</label>
+                    <input type="text" id="meta-year" placeholder="e.g. 2024" class="w-full glass-input rounded-xl px-3.5 py-2 text-sm text-white outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1" for="meta-track">Track #</label>
+                    <input type="text" id="meta-track" placeholder="e.g. 1" class="w-full glass-input rounded-xl px-3.5 py-2 text-sm text-white outline-none">
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1" for="meta-genre">Genre</label>
+                    <input type="text" id="meta-genre" placeholder="e.g. Synthwave" class="w-full glass-input rounded-xl px-3.5 py-2 text-sm text-white outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1" for="meta-composer">Composer</label>
+                    <input type="text" id="meta-composer" placeholder="Optional" class="w-full glass-input rounded-xl px-3.5 py-2 text-sm text-white outline-none">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="mt-auto border-t border-slate-900 py-6 text-center text-xs text-slate-500">
+    <p>Client-side tag reader & writer powered by <span class="text-slate-400">browser-id3-writer</span> and <span class="text-slate-400">iTunes Search API</span>.</p>
+  </footer>
+
+  <script>
+    const state = {
+      file: null,
+      arrayBuffer: null,
+      originalMetadata: {},
+      selectedArtworkBuffer: null,
+      artworkMimeType: 'image/jpeg',
+      audioUrl: null,
+      matchedResults: []
+    };
+
+    // DOM Elements
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const workspace = document.getElementById('workspace');
+    const uploadSection = document.getElementById('upload-section');
+    const btnChangeFile = document.getElementById('btn-change-file');
+
+    // Audio Player Elements
+    const audioPlayer = document.getElementById('audio-player');
+    const btnPlayPause = document.getElementById('btn-play-pause');
+    const playIcon = document.getElementById('play-icon');
+    const audioSeek = document.getElementById('audio-seek');
+    const audioCurrentTime = document.getElementById('audio-current-time');
+    const audioDuration = document.getElementById('audio-duration');
+
+    // Banner Elements
+    const bannerTitle = document.getElementById('banner-title');
+    const bannerSubtitle = document.getElementById('banner-subtitle');
+    const bannerFilename = document.getElementById('banner-filename');
+    const bannerFilesize = document.getElementById('banner-filesize');
+    const bannerArtImg = document.getElementById('banner-art-img');
+    const bannerPlaceholderIcon = document.getElementById('banner-placeholder-icon');
+
+    // Metadata Inputs
+    const metaTitle = document.getElementById('meta-title');
+    const metaArtist = document.getElementById('meta-artist');
+    const metaAlbum = document.getElementById('meta-album');
+    const metaYear = document.getElementById('meta-year');
+    const metaTrack = document.getElementById('meta-track');
+    const metaGenre = document.getElementById('meta-genre');
+    const metaComposer = document.getElementById('meta-composer');
+    const editArtPreview = document.getElementById('edit-art-preview');
+    const editArtEmpty = document.getElementById('edit-art-empty');
+    const editArtUrl = document.getElementById('edit-art-url');
+    const btnLoadCustomArt = document.getElementById('btn-load-custom-art');
+
+    // Search and Matches
+    const searchForm = document.getElementById('search-form');
+    const manualSearchQuery = document.getElementById('manual-search-query');
+    const matchesList = document.getElementById('matches-list');
+    const btnSaveDownload = document.getElementById('btn-save-download');
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-emerald-600/90 border-emerald-500 text-white',
+        error: 'bg-rose-600/90 border-rose-500 text-white',
+        info: 'bg-indigo-600/90 border-indigo-500 text-white'
+      };
+
+      toast.className = `pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl border backdrop-blur-md shadow-xl text-sm transition-all duration-300 transform translate-y-2 opacity-0 ${colors[type] || colors.info}`;
+      
+      const iconName = type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info';
+      toast.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4"></i><span>${message}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-x-full');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-indigo-500', 'bg-indigo-950/20');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-indigo-500', 'bg-indigo-950/20');
+      }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length > 0) handleSelectedFile(files[0]);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) handleSelectedFile(e.target.files[0]);
+    });
+
+    btnChangeFile.addEventListener('click', () => {
+      fileInput.value = '';
+      fileInput.click();
+    });
+
+    async function handleSelectedFile(file) {
+      if (!file.type.startsWith('audio/') && !file.name.match(/\.(mp3|flac|m4a|wav|aac)$/i)) {
+        showToast('Please select a valid audio file (e.g., MP3, FLAC, M4A).', 'error');
+        return;
+      }
+
+      state.file = file;
+      bannerFilename.textContent = file.name;
+      bannerFilesize.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+
+      // Load ArrayBuffer for future tag modification
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        state.arrayBuffer = e.target.result;
+      };
+      reader.readAsArrayBuffer(file);
+
+      // Mount audio player
+      if (state.audioUrl) URL.revokeObjectURL(state.audioUrl);
+      state.audioUrl = URL.createObjectURL(file);
+      audioPlayer.src = state.audioUrl;
+
+      // Unhide workspace
+      uploadSection.classList.add('hidden');
+      workspace.classList.remove('hidden');
+
+      // Attempt parsing existing metadata with jsmediatags
+      parseExistingMetadata(file);
+    }
+
+    function parseExistingMetadata(file) {
+      showToast('Reading file tags...', 'info');
+
+      window.jsmediatags.read(file, {
+        onSuccess: (tag) => {
+          const tags = tag.tags;
+          state.originalMetadata = tags;
+
+          const title = tags.title || cleanFilenameToTitle(file.name);
+          const artist = tags.artist || '';
+          const album = tags.album || '';
+          const year = tags.year || '';
+          const track = tags.track || '';
+          const genre = tags.genre || '';
+
+          // Populate Editor Inputs
+          metaTitle.value = title;
+          metaArtist.value = artist;
+          metaAlbum.value = album;
+          metaYear.value = year;
+          metaTrack.value = track;
+          metaGenre.value = genre;
+
+          // Update Banner
+          bannerTitle.textContent = title || file.name;
+          bannerSubtitle.textContent = artist || 'Unknown Artist';
+
+          // Extract artwork if available
+          if (tags.picture) {
+            const { data, format } = tags.picture;
+            let base64String = "";
+            for (let i = 0; i < data.length; i++) {
+              base64String += String.fromCharCode(data[i]);
+            }
+            const dataUrl = `data:${format};base64,${window.btoa(base64String)}`;
+            setArtworkDisplay(dataUrl);
+
+            // Convert picture data into Uint8Array buffer for browser-id3-writer
+            const u8 = new Uint8Array(data);
+            state.selectedArtworkBuffer = u8.buffer;
+            state.artworkMimeType = format || 'image/jpeg';
+          } else {
+            clearArtworkDisplay();
+          }
+
+          showToast('Loaded tags from file.', 'success');
+
+          // Trigger automatic match query
+          const searchQuery = [artist, title].filter(Boolean).join(' ') || cleanFilenameToTitle(file.name);
+          manualSearchQuery.value = searchQuery;
+          performOnlineSearch(searchQuery);
+        },
+        onError: (err) => {
+          console.warn('Metadata parsing failed or empty:', err);
+          const cleanTitle = cleanFilenameToTitle(file.name);
+          metaTitle.value = cleanTitle;
+          metaArtist.value = '';
+          metaAlbum.value = '';
+          metaYear.value = '';
+          metaTrack.value = '';
+          metaGenre.value = '';
+          bannerTitle.textContent = cleanTitle;
+          bannerSubtitle.textContent = 'Unknown Artist';
+          clearArtworkDisplay();
+          
+          manualSearchQuery.value = cleanTitle;
+          performOnlineSearch(cleanTitle);
+        }
+      });
+    }
+
+    function cleanFilenameToTitle(filename) {
+      return filename
+        .replace(/\.[^/.]+$/, "") // strip extension
+        .replace(/[_\-+]/g, " ")  // replace separators
+        .replace(/^\d+\s*/, "")   // remove leading track numbers
+        .trim();
+    }
+
+    function setArtworkDisplay(imgSrc) {
+      bannerArtImg.src = imgSrc;
+      bannerArtImg.classList.remove('hidden');
+      bannerPlaceholderIcon.classList.add('hidden');
+
+      editArtPreview.src = imgSrc;
+      editArtPreview.classList.remove('hidden');
+      editArtEmpty.classList.add('hidden');
+    }
+
+    function clearArtworkDisplay() {
+      bannerArtImg.classList.add('hidden');
+      bannerPlaceholderIcon.classList.remove('hidden');
+      editArtPreview.classList.add('hidden');
+      editArtEmpty.classList.remove('hidden');
+      state.selectedArtworkBuffer = null;
+    }
+
+    searchForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const query = manualSearchQuery.value.trim();
+      if (query) performOnlineSearch(query);
+    });
+
+    async function performOnlineSearch(query) {
+      matchesList.innerHTML = `
+        <div class="flex items-center justify-center py-10 gap-2 text-indigo-400">
+          <i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i>
+          <span class="text-sm">Searching song database...</span>
+        </div>
+      `;
+      lucide.createIcons();
+
+      try {
+        const endpoint = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=7`;
+        const res = await fetch(endpoint);
+        const data = await res.json();
+
+        state.matchedResults = data.results || [];
+        renderMatchResults(state.matchedResults);
+      } catch (err) {
+        console.error('Search error:', err);
+        matchesList.innerHTML = `
+          <div class="text-center py-8 text-rose-400 text-sm">
+            <i data-lucide="alert-circle" class="w-6 h-6 mx-auto mb-2"></i>
+            <span>Failed to query database. Check connection.</span>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+    }
+
+    function renderMatchResults(results) {
+      if (!results || results.length === 0) {
+        matchesList.innerHTML = `
+          <div class="text-center py-8 text-slate-500 text-sm">
+            <p>No matches found. Try refining search keywords.</p>
+          </div>
+        `;
+        return;
+      }
+
+      matchesList.innerHTML = '';
+      results.forEach((track, index) => {
+        const highResArt = track.artworkUrl100 ? track.artworkUrl100.replace('100x100bb', '600x600bb') : '';
+        const year = track.releaseDate ? track.releaseDate.substring(0, 4) : '';
+        
+        const card = document.createElement('div');
+        card.className = "flex items-center justify-between p-3 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-indigo-500/50 transition-all cursor-pointer group";
+        card.innerHTML = `
+          <div class="flex items-center gap-3 min-w-0">
+            <img src="${track.artworkUrl60 || 'https://placehold.co/60x60/1e293b/94a3b8?text=Music'}" alt="Thumb" class="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-slate-700/50">
+            <div class="min-w-0">
+              <h4 class="text-sm font-medium text-white truncate group-hover:text-indigo-300 transition-colors">${escapeHtml(track.trackName)}</h4>
+              <p class="text-xs text-slate-400 truncate">${escapeHtml(track.artistName)} &bull; <span class="text-slate-500">${escapeHtml(track.collectionName || 'Single')}</span></p>
+              <div class="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
+                <span>${year}</span>
+                <span>&bull;</span>
+                <span>${escapeHtml(track.primaryGenreName || 'Music')}</span>
+              </div>
+            </div>
+          </div>
+          <button class="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white text-xs font-medium border border-indigo-500/30 transition-all flex items-center gap-1 flex-shrink-0 ml-2">
+            <span>Apply</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </button>
+        `;
+
+        card.addEventListener('click', () => applyMatchedTrack(track, highResArt));
+        matchesList.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    async function applyMatchedTrack(track, highResArtUrl) {
+      metaTitle.value = track.trackName || '';
+      metaArtist.value = track.artistName || '';
+      metaAlbum.value = track.collectionName || '';
+      metaYear.value = track.releaseDate ? track.releaseDate.substring(0, 4) : '';
+      metaTrack.value = track.trackNumber ? track.trackNumber.toString() : '1';
+      metaGenre.value = track.primaryGenreName || '';
+
+      bannerTitle.textContent = track.trackName;
+      bannerSubtitle.textContent = track.artistName;
+
+      showToast(`Applied: ${track.trackName} by ${track.artistName}`, 'success');
+
+      if (highResArtUrl) {
+        editArtUrl.value = highResArtUrl;
+        await loadArtworkFromUrl(highResArtUrl);
+      }
+    }
+
+    btnLoadCustomArt.addEventListener('click', () => {
+      const url = editArtUrl.value.trim();
+      if (url) loadArtworkFromUrl(url);
+    });
+
+    async function loadArtworkFromUrl(url) {
+      try {
+        setArtworkDisplay(url);
+        // Fetch binary data of the image for ID3 embedding
+        const response = await fetch(url);
+        const blob = await response.blob();
+        state.artworkMimeType = blob.type || 'image/jpeg';
+        state.selectedArtworkBuffer = await blob.arrayBuffer();
+        showToast('High-resolution album art loaded & ready to embed.', 'info');
+      } catch (err) {
+        console.warn('Direct image fetch blocked by CORS; display only:', err);
+        showToast('Artwork loaded for display (embedded binary may require CORS-friendly link).', 'info');
+      }
+    }
+
+    btnSaveDownload.addEventListener('click', async () => {
+      if (!state.file) {
+        showToast('No audio file loaded.', 'error');
+        return;
+      }
+
+      if (!state.file.name.toLowerCase().endsWith('.mp3')) {
+        showToast('Browser ID3 embedding is currently optimized for MP3 files. Downloading original file with updated name.', 'info');
+        triggerDownload(new Blob([state.arrayBuffer], { type: state.file.type }), `${metaArtist.value} - ${metaTitle.value}.mp3`);
+        return;
+      }
+
+      try {
+        showToast('Encoding ID3v2 metadata & embedding album art...', 'info');
+
+        // Initialize ID3 Writer with MP3 ArrayBuffer
+        const writer = new window.ID3Writer(state.arrayBuffer);
+
+        // Map core tags
+        if (metaTitle.value) writer.setFrame('TIT2', metaTitle.value);
+        if (metaArtist.value) writer.setFrame('TPE1', [metaArtist.value]);
+        if (metaAlbum.value) writer.setFrame('TALB', metaAlbum.value);
+        if (metaYear.value) writer.setFrame('TYER', metaYear.value);
+        if (metaTrack.value) writer.setFrame('TRCK', metaTrack.value);
+        if (metaGenre.value) writer.setFrame('TCON', [metaGenre.value]);
+        if (metaComposer.value) writer.setFrame('TCOM', [metaComposer.value]);
+
+        // Embed Cover Art (APIC)
+        if (state.selectedArtworkBuffer) {
+          writer.setFrame('APIC', {
+            type: 3, // Front cover
+            data: state.selectedArtworkBuffer,
+            description: 'Cover',
+            useUnicodeEncoding: false
+          });
+        }
+
+        writer.addTag();
+
+        const taggedBlob = writer.getBlob();
+        const safeArtist = metaArtist.value.replace(/[/\\?%*:|"<>]/g, '').trim();
+        const safeTitle = metaTitle.value.replace(/[/\\?%*:|"<>]/g, '').trim();
+        const finalFilename = `${safeArtist || 'Artist'} - ${safeTitle || 'Track'}.mp3`;
+
+        triggerDownload(taggedBlob, finalFilename);
+        showToast('Tagged file successfully downloaded!', 'success');
+      } catch (err) {
+        console.error('ID3 Tag write error:', err);
+        showToast('Failed to write ID3 tags: ' + err.message, 'error');
+      }
+    });
+
+    function triggerDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    btnPlayPause.addEventListener('click', () => {
+      if (audioPlayer.paused) {
+        audioPlayer.play();
+        playIcon.setAttribute('data-lucide', 'pause');
+      } else {
+        audioPlayer.pause();
+        playIcon.setAttribute('data-lucide', 'play');
+      }
+      lucide.createIcons();
+    });
+
+    audioPlayer.addEventListener('timeupdate', () => {
+      audioSeek.value = audioPlayer.currentTime;
+      audioCurrentTime.textContent = formatTime(audioPlayer.currentTime);
+    });
+
+    audioPlayer.addEventListener('loadedmetadata', () => {
+      audioSeek.max = audioPlayer.duration;
+      audioDuration.textContent = formatTime(audioPlayer.duration);
+    });
+
+    audioPlayer.addEventListener('ended', () => {
+      playIcon.setAttribute('data-lucide', 'play');
+      lucide.createIcons();
+    });
+
+    audioSeek.addEventListener('input', () => {
+      audioPlayer.currentTime = audioSeek.value;
+    });
+
+    function formatTime(seconds) {
+      if (isNaN(seconds)) return '0:00';
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
