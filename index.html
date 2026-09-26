@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>MetaMatch - Audio Metadata & Lyrics Tagger</title>
   
   <!-- Favicon -->
@@ -21,10 +21,11 @@
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
     }
     ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
     }
     ::-webkit-scrollbar-track {
       background: #0f172a;
@@ -33,9 +34,6 @@
       background: #334155;
       border-radius: 9999px;
     }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
     .glass-card {
       background: rgba(30, 41, 59, 0.7);
       backdrop-filter: blur(12px);
@@ -43,9 +41,15 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
     .glass-input {
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       color: #f1f5f9;
+      font-size: 16px; /* Prevents auto-zoom on iOS */
+    }
+    @media (min-width: 640px) {
+      .glass-input {
+        font-size: 0.875rem; /* 14px on tablets/desktops */
+      }
     }
     .glass-input:focus {
       outline: none;
@@ -54,98 +58,95 @@
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white pb-safe">
 
   <!-- Header -->
-  <header class="border-b border-slate-800/80 sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md">
+  <header class="border-b border-slate-800/80 sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <img src="media/logo.png" alt="MetaMatch Logo" class="w-10 h-10 rounded-xl object-contain shadow-lg shadow-indigo-500/25" onerror="this.outerHTML='<div class=\'w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center\'><i data-lucide=\'music\' class=\'w-5 h-5 text-white\'></i></div>'">
-        <div>
-          <span class="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">MetaMatch</span>
-          <span class="ml-2 text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 font-medium border border-indigo-500/20">Client-Side Audio Tagger</span>
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <img src="media/logo.png" alt="MetaMatch Logo" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-contain shadow-md shadow-indigo-500/20 shrink-0" onerror="this.outerHTML='<div class=\'w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0\'><i data-lucide=\'music\' class=\'w-4 h-4 text-white\'></i></div>'">
+        <div class="truncate">
+          <span class="text-base sm:text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">MetaMatch</span>
+          <span class="hidden sm:inline-block ml-2 text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 font-medium border border-indigo-500/20">Client-Side Audio Tagger</span>
         </div>
       </div>
-      <div class="flex items-center gap-4 text-xs text-slate-400">
-        <span class="flex items-center gap-1.5"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> 100% In-Browser Privacy</span>
+      <div class="flex items-center gap-2 text-xs text-slate-400 shrink-0">
+        <span class="flex items-center gap-1.5"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> <span class="hidden sm:inline">100% In-Browser</span></span>
       </div>
     </div>
   </header>
 
   <!-- Main Container -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
 
     <!-- Upload Hero Zone -->
-    <div id="dropZone" class="glass-card rounded-2xl p-8 border-2 border-dashed border-slate-700/80 hover:border-indigo-500/60 transition-all duration-300 text-center cursor-pointer group relative overflow-hidden">
+    <div id="dropZone" class="glass-card rounded-2xl p-5 sm:p-8 border-2 border-dashed border-slate-700/80 hover:border-indigo-500/60 active:bg-slate-900/60 transition-all duration-200 text-center cursor-pointer group relative overflow-hidden">
       <input type="file" id="fileInput" accept="audio/mp3,audio/mpeg,audio/*" class="hidden">
-      <div class="flex flex-col items-center justify-center space-y-4 relative z-10">
-        <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500/20 transition duration-300 border border-indigo-500/20 shadow-inner">
-          <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+      <div class="flex flex-col items-center justify-center space-y-3 sm:space-y-4 relative z-10">
+        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center group-hover:scale-105 transition duration-300 border border-indigo-500/20 shadow-inner">
+          <i data-lucide="upload-cloud" class="w-7 h-7 sm:w-8 sm:h-8"></i>
         </div>
         <div>
-          <h2 class="text-lg font-semibold text-white tracking-wide">Drop your audio file here or <span class="text-indigo-400 underline underline-offset-4 decoration-indigo-500/40">Browse</span></h2>
-          <p class="text-sm text-slate-400 mt-1">Supports MP3 files with ID3 tag parsing, lyrics lookup, and cover embedding</p>
+          <h2 class="text-base sm:text-lg font-semibold text-white tracking-wide">Tap to pick audio or <span class="text-indigo-400 underline underline-offset-4 decoration-indigo-500/40">Browse</span></h2>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1 max-w-sm mx-auto">Supports MP3 files with tag editing, cover art, and lyrics lookup</p>
         </div>
-        <div id="fileBadge" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs font-mono text-indigo-300">
-          <i data-lucide="disc" class="w-3.5 h-3.5"></i>
-          <span id="fileName">track.mp3</span>
-          <span id="fileSize" class="text-slate-400"></span>
+        <div id="fileBadge" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs font-mono text-indigo-300 max-w-full">
+          <i data-lucide="disc" class="w-3.5 h-3.5 shrink-0"></i>
+          <span id="fileName" class="truncate max-w-[200px] sm:max-w-xs">track.mp3</span>
+          <span id="fileSize" class="text-slate-400 shrink-0"></span>
         </div>
       </div>
     </div>
 
     <!-- Active Audio Player Strip -->
-    <div id="audioPlayerStrip" class="hidden glass-card rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div id="audioPlayerStrip" class="hidden glass-card rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="flex items-center gap-3 w-full sm:w-auto">
-        <button id="stripPlayBtn" class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 flex items-center justify-center text-white transition shrink-0 shadow-md shadow-indigo-600/30">
-          <i data-lucide="play" class="w-4 h-4 ml-0.5" id="stripPlayIcon"></i>
+        <button id="stripPlayBtn" aria-label="Play or pause preview" class="w-11 h-11 rounded-full bg-indigo-600 hover:bg-indigo-500 active:scale-95 flex items-center justify-center text-white transition shrink-0 shadow-md shadow-indigo-600/30">
+          <i data-lucide="play" class="w-5 h-5 ml-0.5" id="stripPlayIcon"></i>
         </button>
-        <div class="min-w-0">
+        <div class="min-w-0 flex-1">
           <p class="text-sm font-medium text-white truncate" id="stripTitle">Audio Preview</p>
           <p class="text-xs text-slate-400" id="stripTime">0:00 / 0:00</p>
         </div>
       </div>
-      <audio id="audioPreview" class="w-full sm:max-w-md h-8"></audio>
+      <audio id="audioPreview" class="w-full sm:max-w-md h-9"></audio>
     </div>
 
     <!-- Processing & Status Toast -->
-    <div id="statusAlert" class="hidden rounded-xl p-4 glass-card border-indigo-500/30 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div id="statusSpinner" class="animate-spin text-indigo-400"><i data-lucide="loader" class="w-5 h-5"></i></div>
-        <span id="statusText" class="text-sm text-slate-200 font-medium">Processing...</span>
+    <div id="statusAlert" class="hidden rounded-xl p-3.5 sm:p-4 glass-card border-indigo-500/30 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div id="statusSpinner" class="animate-spin text-indigo-400 shrink-0"><i data-lucide="loader" class="w-4 h-4 sm:w-5 sm:h-5"></i></div>
+        <span id="statusText" class="text-xs sm:text-sm text-slate-200 font-medium truncate">Processing...</span>
       </div>
-      <button onclick="this.parentElement.classList.add('hidden')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      <button onclick="this.parentElement.classList.add('hidden')" class="p-1 text-slate-400 hover:text-white shrink-0"><i data-lucide="x" class="w-4 h-4"></i></button>
     </div>
 
-    <!-- Main Workspace (Hidden until file is loaded) -->
-    <div id="workspace" class="hidden space-y-8">
+    <!-- Main Workspace -->
+    <div id="workspace" class="hidden space-y-6">
 
-      <!-- Enhanced Dual-Search & Filter Query Bar -->
-      <div class="glass-card rounded-2xl p-6 shadow-xl space-y-4">
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-slate-800 pb-3">
+      <!-- Search & Filter Card -->
+      <div class="glass-card rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-800 pb-3">
           <div class="flex items-center gap-2">
             <i data-lucide="sparkles" class="w-4 h-4 text-indigo-400"></i>
-            <h3 class="text-sm font-semibold text-white">Search Song &amp; Filter By Artist</h3>
+            <h3 class="text-sm font-semibold text-white">Search Song &amp; Cloud Match</h3>
           </div>
-          <span class="text-xs text-slate-400">Include artist to narrow down identical song titles</span>
+          <span class="text-[11px] sm:text-xs text-slate-400">Add an artist filter if needed</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-          <!-- Song Name Input -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 sm:gap-3 items-center">
           <div class="md:col-span-6 relative">
             <i data-lucide="music" class="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400"></i>
-            <input type="text" id="searchSongTitle" placeholder="Song title (e.g. Bohemian Rhapsody, Stay)..." class="glass-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm">
+            <input type="text" id="searchSongTitle" placeholder="Song title..." class="glass-input w-full pl-10 pr-4 py-2.5 rounded-xl">
           </div>
 
-          <!-- Artist Input (Optional constraint) -->
           <div class="md:col-span-4 relative">
             <i data-lucide="user" class="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400"></i>
-            <input type="text" id="searchArtist" placeholder="Artist filter (optional, e.g. Queen)..." class="glass-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm">
+            <input type="text" id="searchArtist" placeholder="Artist filter (optional)..." class="glass-input w-full pl-10 pr-4 py-2.5 rounded-xl">
           </div>
 
-          <!-- Search Button -->
-          <div class="md:col-span-2 flex gap-2">
-            <button id="btnSearch" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-semibold text-xs tracking-wider uppercase text-white transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30">
+          <div class="md:col-span-2">
+            <button id="btnSearch" class="w-full py-2.5 sm:py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-98 font-semibold text-xs tracking-wider uppercase text-white transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30">
               <i data-lucide="search" class="w-4 h-4"></i> Search
             </button>
           </div>
@@ -153,58 +154,55 @@
 
         <!-- Search Results Grid & Quick Filter -->
         <div id="searchResultsContainer" class="mt-4 pt-4 border-t border-slate-800/80 hidden space-y-3">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+            <div class="flex items-center justify-between sm:justify-start gap-2">
               <h4 class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Matched Cloud Songs</h4>
               <span id="resultsCount" class="text-xs text-indigo-400 font-mono"></span>
             </div>
 
-            <!-- In-Results Instant Filter -->
             <div class="relative w-full sm:w-64">
-              <i data-lucide="filter" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500"></i>
-              <input type="text" id="inResultsFilter" placeholder="Filter these results..." class="glass-input w-full pl-8 pr-3 py-1.5 rounded-lg text-xs">
+              <i data-lucide="filter" class="w-3.5 h-3.5 absolute left-3 top-3 text-slate-500"></i>
+              <input type="text" id="inResultsFilter" placeholder="Filter returned songs..." class="glass-input w-full pl-8 pr-3 py-2 rounded-lg text-xs">
             </div>
           </div>
 
-          <div id="searchResults" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 max-h-80 overflow-y-auto pr-1"></div>
+          <div id="searchResults" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3.5 max-h-72 sm:max-h-80 overflow-y-auto pr-1"></div>
         </div>
       </div>
 
       <!-- Side-by-Side Metadata Form & Lyrics Workbench -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <!-- Left Column: Album Art & Cover Drop (4 Cols) -->
-        <div class="lg:col-span-4 space-y-6">
-          <div class="glass-card rounded-2xl p-6 flex flex-col items-center text-center">
-            <h3 class="text-xs uppercase font-semibold tracking-wider text-slate-400 self-start mb-4">Artwork Preview</h3>
+        <!-- Album Art & Action Controls -->
+        <div class="lg:col-span-4 space-y-6 order-2 lg:order-1">
+          <div class="glass-card rounded-2xl p-5 sm:p-6 flex flex-col items-center text-center">
+            <h3 class="text-xs uppercase font-semibold tracking-wider text-slate-400 self-start mb-3">Artwork Preview</h3>
             
-            <div class="relative group w-64 h-64 rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-900 shadow-2xl flex items-center justify-center">
+            <div class="relative group w-48 h-48 sm:w-60 sm:h-60 rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-900 shadow-2xl flex items-center justify-center">
               <img id="artworkPreview" src="" alt="Album Artwork" class="w-full h-full object-cover hidden">
               <div id="artworkPlaceholder" class="flex flex-col items-center justify-center text-slate-500 p-4">
-                <i data-lucide="image" class="w-12 h-12 mb-2 stroke-1"></i>
-                <span class="text-xs">No cover art selected</span>
+                <i data-lucide="image" class="w-10 h-10 mb-2 stroke-1"></i>
+                <span class="text-xs">No cover selected</span>
               </div>
               
-              <!-- Custom Cover Drop Overlay -->
-              <label for="coverArtInput" class="absolute inset-0 bg-slate-950/80 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-2 transition duration-200 cursor-pointer p-4 text-center">
+              <label for="coverArtInput" class="absolute inset-0 bg-slate-950/80 opacity-0 group-hover:opacity-100 focus-within:opacity-100 active:opacity-100 flex flex-col items-center justify-center gap-2 transition duration-200 cursor-pointer p-4 text-center">
                 <i data-lucide="upload" class="w-6 h-6 text-indigo-400"></i>
                 <span class="text-xs font-semibold text-white">Upload Custom Artwork</span>
-                <span class="text-[10px] text-slate-400">Click or drop PNG / JPEG</span>
+                <span class="text-[10px] text-slate-400">Tap to select PNG / JPG</span>
               </label>
               <input type="file" id="coverArtInput" accept="image/png,image/jpeg,image/webp" class="hidden">
             </div>
 
-            <div class="w-full mt-4 flex items-center justify-between text-xs text-slate-400">
+            <div class="w-full mt-3.5 flex items-center justify-between text-xs text-slate-400">
               <span id="artResolution">Dimension: --</span>
-              <button id="btnClearArt" class="text-rose-400 hover:text-rose-300 flex items-center gap-1 transition">
+              <button id="btnClearArt" class="text-rose-400 hover:text-rose-300 active:scale-95 flex items-center gap-1 transition p-1">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear Art
               </button>
             </div>
           </div>
 
-          <!-- Quick Actions & Export Settings -->
-          <div class="glass-card rounded-2xl p-6 space-y-4">
-            <h3 class="text-xs uppercase font-semibold tracking-wider text-slate-400">Export File Naming</h3>
+          <div class="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
+            <h3 class="text-xs uppercase font-semibold tracking-wider text-slate-400">Export Settings</h3>
             <div>
               <label class="text-xs text-slate-400 block mb-1">Pattern Template</label>
               <input type="text" id="namePattern" value="{artist} - {title}" class="glass-input w-full px-3.5 py-2 rounded-xl text-xs font-mono">
@@ -212,89 +210,87 @@
             </div>
 
             <div class="pt-2 border-t border-slate-800 space-y-2.5">
-              <button id="btnWriteTags" class="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:opacity-95 font-semibold text-sm text-white shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+              <button id="btnWriteTags" class="w-full min-h-[46px] py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 active:scale-98 font-semibold text-sm text-white shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
                 <i data-lucide="download" class="w-4 h-4"></i> Download Tagged MP3
               </button>
-              <button id="btnDownloadLrc" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 font-medium text-xs text-slate-200 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              <button id="btnDownloadLrc" class="w-full min-h-[44px] py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-98 border border-slate-700 font-medium text-xs text-slate-200 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                 <i data-lucide="file-text" class="w-3.5 h-3.5 text-indigo-400"></i> Download Synced (.LRC) File
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Right Column: Tag Fields & Lyrics Editor (8 Cols) -->
-        <div class="lg:col-span-8 space-y-6">
-          <div class="glass-card rounded-2xl p-6 shadow-xl space-y-6">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <!-- Tag Fields & Lyrics Editor -->
+        <div class="lg:col-span-8 space-y-6 order-1 lg:order-2">
+          <div class="glass-card rounded-2xl p-4 sm:p-6 shadow-xl space-y-5 sm:space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 sm:pb-4">
               <div>
-                <h3 class="text-base font-bold text-white flex items-center gap-2">
-                  <i data-lucide="sliders" class="w-4 h-4 text-indigo-400"></i> Metadata Inspector & Editor
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  <i data-lucide="sliders" class="w-4 h-4 text-indigo-400"></i> Metadata Inspector &amp; Editor
                 </h3>
-                <p class="text-xs text-slate-400">Modify any values before saving into your audio file</p>
+                <p class="text-xs text-slate-400">Review or adjust tags before exporting</p>
               </div>
-              <button id="btnCopyFromMatch" class="text-xs px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 font-medium flex items-center gap-1.5 transition">
-                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Re-apply Match
+              <button id="btnCopyFromMatch" class="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 active:scale-95 font-medium flex items-center gap-1.5 transition shrink-0">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Re-apply Match</span><span class="sm:hidden">Reset</span>
               </button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label class="text-xs text-slate-400 font-medium block mb-1.5">Track Title</label>
-                <input type="text" id="metaTitle" class="glass-input w-full px-3.5 py-2.5 rounded-xl text-sm font-medium">
+                <label class="text-xs text-slate-400 font-medium block mb-1">Track Title</label>
+                <input type="text" id="metaTitle" class="glass-input w-full px-3.5 py-2.5 rounded-xl font-medium">
               </div>
               <div>
-                <label class="text-xs text-slate-400 font-medium block mb-1.5">Artist</label>
-                <input type="text" id="metaArtist" class="glass-input w-full px-3.5 py-2.5 rounded-xl text-sm font-medium">
+                <label class="text-xs text-slate-400 font-medium block mb-1">Artist</label>
+                <input type="text" id="metaArtist" class="glass-input w-full px-3.5 py-2.5 rounded-xl font-medium">
               </div>
               <div>
-                <label class="text-xs text-slate-400 font-medium block mb-1.5">Album</label>
-                <input type="text" id="metaAlbum" class="glass-input w-full px-3.5 py-2.5 rounded-xl text-sm">
+                <label class="text-xs text-slate-400 font-medium block mb-1">Album</label>
+                <input type="text" id="metaAlbum" class="glass-input w-full px-3.5 py-2.5 rounded-xl">
               </div>
               <div>
-                <label class="text-xs text-slate-400 font-medium block mb-1.5">Genre</label>
-                <input type="text" id="metaGenre" class="glass-input w-full px-3.5 py-2.5 rounded-xl text-sm">
+                <label class="text-xs text-slate-400 font-medium block mb-1">Genre</label>
+                <input type="text" id="metaGenre" class="glass-input w-full px-3.5 py-2.5 rounded-xl">
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label class="text-xs text-slate-400 font-medium block mb-1.5">Year</label>
-                  <input type="text" id="metaYear" class="glass-input w-full px-3.5 py-2.5 rounded-xl text-sm">
+                  <label class="text-xs text-slate-400 font-medium block mb-1">Year</label>
+                  <input type="text" id="metaYear" class="glass-input w-full px-3 py-2.5 rounded-xl">
                 </div>
                 <div>
-                  <label class="text-xs text-slate-400 font-medium block mb-1.5">Track #</label>
-                  <input type="text" id="metaTrack" placeholder="1" class="glass-input w-full px-3.5 py-2.5 rounded-xl text-sm font-mono">
+                  <label class="text-xs text-slate-400 font-medium block mb-1">Track #</label>
+                  <input type="text" id="metaTrack" placeholder="1" class="glass-input w-full px-3 py-2.5 rounded-xl font-mono">
                 </div>
               </div>
               <div>
-                <label class="text-xs text-slate-400 font-medium block mb-1.5">Composer / Rights</label>
-                <input type="text" id="metaComposer" class="glass-input w-full px-3.5 py-2.5 rounded-xl text-sm">
+                <label class="text-xs text-slate-400 font-medium block mb-1">Composer / Rights</label>
+                <input type="text" id="metaComposer" class="glass-input w-full px-3.5 py-2.5 rounded-xl">
               </div>
             </div>
 
             <!-- Lyrics Workbench Container -->
             <div class="pt-4 border-t border-slate-800/80">
-              <div class="flex items-center justify-between mb-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <div class="flex items-center gap-2">
                   <span class="w-2 h-2 rounded-full bg-violet-400"></span>
-                  <label class="text-xs uppercase tracking-wider font-semibold text-slate-300">Track Lyrics (USLT Tag)</label>
+                  <label class="text-xs uppercase tracking-wider font-semibold text-slate-300">Track Lyrics</label>
                   <span id="lyricsStatusBadge" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">None</span>
                 </div>
                 <div class="flex items-center gap-2">
-                  <button id="btnFetchLyricsManual" class="text-xs text-violet-400 hover:text-violet-300 font-medium transition flex items-center gap-1">
-                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh Lyrics
+                  <button id="btnFetchLyricsManual" class="text-xs text-violet-400 hover:text-violet-300 font-medium transition flex items-center gap-1 active:scale-95">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh
                   </button>
                   <span class="text-slate-700">|</span>
-                  <button id="btnToggleSync" class="text-xs text-indigo-400 hover:text-indigo-300 font-mono transition">View Synced (.LRC)</button>
+                  <button id="btnToggleSync" class="text-xs text-indigo-400 hover:text-indigo-300 font-mono transition active:scale-95">View Synced (.LRC)</button>
                 </div>
               </div>
 
-              <!-- Plain Lyrics Textarea -->
               <div id="lyricsPlainWrapper">
-                <textarea id="metaLyrics" rows="8" placeholder="Lyrics will appear here automatically when found via LRCLIB, or you can paste your own..." class="glass-input w-full p-3.5 rounded-xl text-xs font-mono leading-relaxed resize-y"></textarea>
+                <textarea id="metaLyrics" rows="7" placeholder="Plain lyrics appear here automatically..." class="glass-input w-full p-3.5 rounded-xl font-mono leading-relaxed resize-y"></textarea>
               </div>
 
-              <!-- Synced Lyrics View (Initially Hidden) -->
               <div id="lyricsSyncedWrapper" class="hidden">
-                <textarea id="metaSyncedLyrics" rows="8" placeholder="Synced lyrics format [00:12.34] line text..." class="glass-input w-full p-3.5 rounded-xl text-xs font-mono leading-relaxed text-indigo-300 resize-y"></textarea>
+                <textarea id="metaSyncedLyrics" rows="7" placeholder="Synced lyrics format [00:12.34] line text..." class="glass-input w-full p-3.5 rounded-xl font-mono leading-relaxed text-indigo-300 resize-y"></textarea>
               </div>
               <p class="text-[11px] text-slate-400 mt-2">
                 Plain text lyrics will be embedded into the audio ID3 <code class="text-indigo-300">USLT</code> frame. Synced timestamps are exported via the .LRC file.
@@ -310,18 +306,16 @@
 
   </main>
 
-  <footer class="border-t border-slate-800/80 py-6 text-center text-xs text-slate-400">
-    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-      <span>MetaMatch Audio Suite &bull; Powered by LRCLIB & iTunes Search API</span>
-      <span>Client-side audio processing &bull; No files sent to any server</span>
+  <footer class="border-t border-slate-800/80 py-4 sm:py-6 text-center text-xs text-slate-400">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-2">
+      <span>MetaMatch Audio Suite &bull; Powered by LRCLIB &amp; iTunes Search</span>
+      <span>Client-side audio processing</span>
     </div>
   </footer>
 
   <script>
-    // Initialize icons
     lucide.createIcons();
 
-    // App State
     let currentRawFile = null;
     let currentArrayBuffer = null;
     let currentArtBlob = null;
@@ -330,7 +324,6 @@
     let showingSyncedLyrics = false;
     let fetchedRawResults = [];
 
-    // Elements
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const fileBadge = document.getElementById('fileBadge');
@@ -348,7 +341,6 @@
     const statusText = document.getElementById('statusText');
     const statusSpinner = document.getElementById('statusSpinner');
 
-    // Dual Search Elements
     const searchSongTitle = document.getElementById('searchSongTitle');
     const searchArtist = document.getElementById('searchArtist');
     const btnSearch = document.getElementById('btnSearch');
@@ -357,7 +349,6 @@
     const searchResults = document.getElementById('searchResults');
     const resultsCount = document.getElementById('resultsCount');
 
-    // Metadata & Lyrics Elements
     const metaTitle = document.getElementById('metaTitle');
     const metaArtist = document.getElementById('metaArtist');
     const metaAlbum = document.getElementById('metaAlbum');
@@ -383,7 +374,6 @@
     const btnCopyFromMatch = document.getElementById('btnCopyFromMatch');
     const namePattern = document.getElementById('namePattern');
 
-    // Helpers
     function setStatus(msg, loading = true) {
       statusAlert.classList.remove('hidden');
       statusText.innerText = msg;
@@ -398,7 +388,6 @@
       return name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
     }
 
-    // Drag and Drop Handling
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -414,7 +403,6 @@
       if (e.target.files.length) handleFileSelected(e.target.files[0]);
     });
 
-    // File Selection Handler
     async function handleFileSelected(file) {
       if (!file.type.includes('audio') && !file.name.match(/\.(mp3|m4a|aac|flac|wav)$/i)) {
         alert('Please upload an audio file (e.g., MP3).');
@@ -426,7 +414,6 @@
       fileBadge.classList.remove('hidden');
       fileBadge.classList.add('flex');
 
-      // Audio Preview setup
       const audioUrl = URL.createObjectURL(file);
       audioPreview.src = audioUrl;
       stripTitle.innerText = file.name;
@@ -443,7 +430,6 @@
       setStatus('Reading file metadata...', true);
       workspace.classList.remove('hidden');
 
-      // Read ID3 via jsmediatags
       jsmediatags.read(file, {
         onSuccess: async (tag) => {
           const tags = tag.tags;
@@ -468,7 +454,6 @@
             resetArtworkDisplay();
           }
 
-          // Seed the search inputs
           searchSongTitle.value = metaTitle.value;
           searchArtist.value = metaArtist.value;
 
@@ -486,7 +471,6 @@
       });
     }
 
-    // Audio Play / Pause
     stripPlayBtn.addEventListener('click', () => {
       if (audioPreview.paused) {
         audioPreview.play();
@@ -511,7 +495,6 @@
       lucide.createIcons();
     });
 
-    // Artwork Helpers
     function setArtworkDisplay(url) {
       artworkPreview.src = url;
       artworkPreview.classList.remove('hidden');
@@ -541,12 +524,10 @@
       }
     });
 
-    // Search Trigger Handlers
     btnSearch.addEventListener('click', () => performSearch(false));
     searchSongTitle.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(false); });
     searchArtist.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(false); });
 
-    // Live In-Results Filter
     inResultsFilter.addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase().trim();
       if (!q) {
@@ -561,7 +542,6 @@
       renderTrackCards(filtered);
     });
 
-    // Unified Search Method
     async function performSearch(autoSelectFirst = false) {
       const titleQuery = searchSongTitle.value.trim();
       const artistQuery = searchArtist.value.trim();
@@ -571,7 +551,6 @@
         return;
       }
 
-      // Build consolidated query
       const fullTerm = [titleQuery, artistQuery].filter(Boolean).join(' ');
       setStatus(`Searching for "${fullTerm}"...`, true);
       searchResultsContainer.classList.remove('hidden');
@@ -586,12 +565,11 @@
 
         if (!data.results || data.results.length === 0) {
           resultsCount.innerText = '0 found';
-          searchResults.innerHTML = `<div class="col-span-full py-4 text-center text-xs text-slate-400">No matching tracks found. Try broadening your query or removing the artist filter.</div>`;
+          searchResults.innerHTML = `<div class="col-span-full py-4 text-center text-xs text-slate-400">No matching tracks found. Try broadening the search.</div>`;
           fetchedRawResults = [];
           return;
         }
 
-        // Sort results: prioritize items matching the artist filter if provided
         let results = data.results;
         if (artistQuery) {
           const lArtist = artistQuery.toLowerCase();
@@ -613,25 +591,24 @@
         }
       } catch (err) {
         console.error('Search error:', err);
-        setStatus('Search request failed. Please check network connection.', false);
+        setStatus('Search request failed. Please check your network connection.', false);
       }
     }
 
-    // Render Cards in Grid
     function renderTrackCards(tracks) {
       searchResults.innerHTML = '';
       if (!tracks.length) {
-        searchResults.innerHTML = `<div class="col-span-full py-4 text-center text-xs text-slate-400">No matches found for current filter.</div>`;
+        searchResults.innerHTML = `<div class="col-span-full py-4 text-center text-xs text-slate-400">No tracks match your filter.</div>`;
         return;
       }
 
       tracks.forEach((track) => {
         const card = document.createElement('div');
-        card.className = `p-3 rounded-xl bg-slate-900/60 hover:bg-indigo-950/40 border border-slate-800 hover:border-indigo-500/50 transition cursor-pointer flex items-center gap-3 group`;
+        card.className = `p-2.5 sm:p-3 rounded-xl bg-slate-900/60 hover:bg-indigo-950/40 active:bg-indigo-950/60 border border-slate-800 hover:border-indigo-500/50 transition cursor-pointer flex items-center gap-2.5 sm:gap-3 group`;
         const thumb = track.artworkUrl100 ? track.artworkUrl100.replace('100x100bb', '200x200bb') : '';
 
         card.innerHTML = `
-          <img src="${thumb}" class="w-12 h-12 rounded-lg object-cover bg-slate-800 shrink-0" onerror="this.src=''">
+          <img src="${thumb}" class="w-11 h-11 sm:w-12 sm:h-12 rounded-lg object-cover bg-slate-800 shrink-0" onerror="this.src=''">
           <div class="min-w-0 flex-1">
             <p class="text-xs font-semibold text-white truncate group-hover:text-indigo-300 transition">${track.trackName}</p>
             <p class="text-[11px] text-slate-400 truncate">${track.artistName} &bull; ${track.collectionName || 'Single'}</p>
@@ -648,7 +625,6 @@
       lucide.createIcons();
     }
 
-    // Apply Track Match Data
     async function applyCloudMatch(track) {
       lastCloudMatch = track;
       metaTitle.value = track.trackName || '';
@@ -658,11 +634,9 @@
       metaYear.value = track.releaseDate ? track.releaseDate.substring(0, 4) : '';
       metaTrack.value = track.trackNumber ? track.trackNumber.toString() : '1';
 
-      // Keep search boxes synced with selected match
       searchSongTitle.value = track.trackName || '';
       searchArtist.value = track.artistName || '';
 
-      // High Res Artwork fetch (600x600)
       if (track.artworkUrl100) {
         const highResUrl = track.artworkUrl100.replace('100x100bb', '600x600bb');
         try {
@@ -671,12 +645,11 @@
           currentArtBlob = blob;
           setArtworkDisplay(URL.createObjectURL(blob));
         } catch (e) {
-          console.warn('Could not fetch high-res artwork directly, using URL fallback:', e);
+          console.warn('Artwork fallback to direct URL:', e);
           setArtworkDisplay(highResUrl);
         }
       }
 
-      // Automatically fetch Lyrics via LRCLIB
       lookupLyrics(
         track.trackName,
         track.artistName,
@@ -689,7 +662,6 @@
       if (lastCloudMatch) applyCloudMatch(lastCloudMatch);
     });
 
-    // Lyrics Fetching via LRCLIB
     btnFetchLyricsManual.addEventListener('click', () => {
       lookupLyrics(metaTitle.value, metaArtist.value, metaAlbum.value, audioDuration);
     });
@@ -718,7 +690,7 @@
         const data = await resp.json();
         if (data.plainLyrics) {
           metaLyrics.value = data.plainLyrics;
-          lyricsStatusBadge.innerText = data.syncedLyrics ? 'Plain + Synced' : 'Plain Lyrics';
+          lyricsStatusBadge.innerText = data.syncedLyrics ? 'Plain + Synced' : 'Plain';
           lyricsStatusBadge.className = 'text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono';
         }
         if (data.syncedLyrics) {
@@ -730,18 +702,17 @@
         }
       } catch (err) {
         console.warn('LRCLIB Lookup Failed:', err);
-        lyricsStatusBadge.innerText = 'Lookup Error';
+        lyricsStatusBadge.innerText = 'Error';
         lyricsStatusBadge.className = 'text-[11px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono';
       }
     }
 
-    // Toggle Synced vs Plain lyrics view
     btnToggleSync.addEventListener('click', () => {
       showingSyncedLyrics = !showingSyncedLyrics;
       if (showingSyncedLyrics) {
         lyricsPlainWrapper.classList.add('hidden');
         lyricsSyncedWrapper.classList.remove('hidden');
-        btnToggleSync.innerText = 'View Plain Lyrics';
+        btnToggleSync.innerText = 'View Plain';
       } else {
         lyricsPlainWrapper.classList.remove('hidden');
         lyricsSyncedWrapper.classList.add('hidden');
@@ -749,7 +720,6 @@
       }
     });
 
-    // Download .LRC file
     btnDownloadLrc.addEventListener('click', () => {
       const lrcContent = metaSyncedLyrics.value.trim();
       if (!lrcContent) {
@@ -769,7 +739,6 @@
       URL.revokeObjectURL(url);
     });
 
-    // Compute formatted filename
     function computeExportFilename() {
       const pattern = namePattern.value.trim() || '{artist} - {title}';
       const clean = (val) => (val || '').trim().replace(/[\\/:*?"<>|]/g, '_');
@@ -786,7 +755,6 @@
       return name;
     }
 
-    // Write ID3 Tags & Trigger Download
     btnWriteTags.addEventListener('click', async () => {
       if (!currentArrayBuffer) {
         alert('Please upload an audio file first.');
@@ -798,7 +766,6 @@
       try {
         const writer = new ID3Writer(currentArrayBuffer);
 
-        // Core Text Frames
         if (metaTitle.value.trim()) writer.setFrame('TIT2', metaTitle.value.trim());
         if (metaArtist.value.trim()) writer.setFrame('TPE1', [metaArtist.value.trim()]);
         if (metaAlbum.value.trim()) writer.setFrame('TALB', metaAlbum.value.trim());
@@ -807,7 +774,6 @@
         if (metaTrack.value.trim()) writer.setFrame('TRCK', metaTrack.value.trim());
         if (metaComposer.value.trim()) writer.setFrame('TCOM', [metaComposer.value.trim()]);
 
-        // Unsynchronized Lyrics Frame (USLT)
         const lyricsText = metaLyrics.value.trim();
         if (lyricsText) {
           writer.setFrame('USLT', {
@@ -817,23 +783,20 @@
           });
         }
 
-        // Embedded Cover Artwork (APIC)
         if (currentArtBlob) {
           const artBuffer = await currentArtBlob.arrayBuffer();
           writer.setFrame('APIC', {
-            type: 3, // Cover (front)
+            type: 3,
             data: artBuffer,
             description: 'Cover',
             useUnicodeEncoding: false
           });
         }
 
-        // Generate tagged blob
         writer.addTag();
         const taggedBlob = writer.getBlob();
         const finalFilename = computeExportFilename();
 
-        // Download trigger
         const downloadUrl = URL.createObjectURL(taggedBlob);
         const downloadLink = document.createElement('a');
         downloadLink.href = downloadUrl;
@@ -843,7 +806,7 @@
         document.body.removeChild(downloadLink);
         URL.revokeObjectURL(downloadUrl);
 
-        setStatus(`Saved successfully as "${finalFilename}"!`, false);
+        setStatus(`Saved as "${finalFilename}"!`, false);
         setTimeout(hideStatus, 4000);
       } catch (err) {
         console.error('Error embedding metadata tags:', err);
